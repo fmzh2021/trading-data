@@ -8,9 +8,8 @@ on:
   workflow_dispatch:  # 允许手动触发
     inputs:
       stock_codes:
-        description: '股票代码（多个用逗号分隔，如: 600036,000001,300001）'
+        description: '股票代码（多个用逗号分隔，如: 600036,000001,300001）。留空则使用 Repository Variables/Secrets 中的配置'
         required: false
-        default: '600036'
         type: string
 
 jobs:
@@ -31,22 +30,33 @@ jobs:
 
       - name: 运行股票监控
         env:
-          # 股票代码配置优先级：手动输入 > repository variables > secrets > 默认值
+          # 股票代码配置优先级：手动输入（非空）> Repository Variables > Repository Secrets > 默认值
           INPUT_CODES: ${{ inputs.stock_codes }}
           VAR_CODES: ${{ vars.STOCK_CODES }}
           SECRET_CODES: ${{ secrets.STOCK_CODES }}
         run: |
-          # 按优先级选择股票代码：手动输入 > repository variables > secrets > 默认值
+          # 按优先级选择股票代码
+          # 优先级：手动输入（非空）> Repository Variables > Repository Secrets > 默认值
           if [ -n "$INPUT_CODES" ]; then
+            # 用户手动输入了值，使用手动输入
             STOCK_CODES="$INPUT_CODES"
+            echo "✅ 使用手动输入的股票代码: $STOCK_CODES"
           elif [ -n "$VAR_CODES" ]; then
+            # 手动输入为空，使用 Repository Variables
             STOCK_CODES="$VAR_CODES"
+            echo "✅ 使用 Repository Variables 中的股票代码: $STOCK_CODES"
           elif [ -n "$SECRET_CODES" ]; then
+            # Repository Variables 为空，使用 Repository Secrets
             STOCK_CODES="$SECRET_CODES"
+            echo "✅ 使用 Repository Secrets 中的股票代码: $STOCK_CODES"
           else
+            # 都没有配置，使用默认值
             STOCK_CODES="600036"
+            echo "✅ 使用默认股票代码: $STOCK_CODES"
           fi
-          echo "监控股票代码: $STOCK_CODES"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "最终监控股票代码: $STOCK_CODES"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           export STOCK_CODES
           python stock_monitor.py
 
