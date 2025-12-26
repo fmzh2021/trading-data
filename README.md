@@ -21,6 +21,7 @@
 │       └── stock-monitor.yml    # GitHub Actions 工作流配置
 ├── stock_monitor.py              # 股票监控主程序
 ├── requirements.txt              # Python 依赖
+├── trigger_workflow.sh           # 触发 workflow 的便捷脚本
 └── README.md                     # 项目说明文档
 ```
 
@@ -30,14 +31,34 @@
 
 #### GitHub Actions 配置（推荐）
 
-在 GitHub 仓库的 Settings > Secrets and variables > Actions 中添加 Secret：
+**方式一：Repository Variables（推荐）**
 
-- `STOCK_CODES`: 股票代码，多个用逗号分隔，如：`600036,000001,300001`
-  - `600036` - 招商银行（上海）
-  - `000001` - 平安银行（深圳）
-  - `300001` - 特锐德（创业板）
+在 GitHub 仓库的 Settings > Secrets and variables > Actions > Variables 标签页中添加：
 
-如果不设置，默认监控 `600036`（招商银行）。
+- 变量名：`STOCK_CODES`
+- 变量值：`600036,000001,300001`（多个用逗号分隔）
+
+**方式二：Repository Secrets**
+
+在 GitHub 仓库的 Settings > Secrets and variables > Actions > Secrets 标签页中添加：
+
+- Secret 名：`STOCK_CODES`
+- Secret 值：`600036,000001,300001`（多个用逗号分隔）
+
+**方式三：手动触发时输入**
+
+在 GitHub Actions 页面手动触发时，可以在输入框中直接输入股票代码。
+
+**优先级说明：**
+1. 手动触发时输入的股票代码（最高优先级）
+2. Repository Variables 中的 `STOCK_CODES`
+3. Repository Secrets 中的 `STOCK_CODES`
+4. 默认值 `600036`（招商银行）
+
+**股票代码示例：**
+- `600036` - 招商银行（上海）
+- `000001` - 平安银行（深圳）
+- `300001` - 特锐德（创业板）
 
 #### 本地运行配置
 
@@ -76,7 +97,78 @@ schedule:
 
 ### 4. 手动触发
 
-在 GitHub 仓库的 Actions 页面，选择 "股票监控" 工作流，点击 "Run workflow" 即可手动触发。
+#### 方式一：GitHub Web 界面
+
+在 GitHub 仓库的 Actions 页面，选择 "股票实时监控" 工作流，点击 "Run workflow" 按钮，可选择输入股票代码，然后点击 "Run workflow" 即可手动触发。
+
+#### 方式二：使用 curl 命令
+
+通过 GitHub API 使用 curl 命令触发 workflow：
+
+```bash
+# 基本命令（使用默认或配置的股票代码）
+curl -X POST \
+  -H "Accept: application/vnd.github+json" \
+  -H "Authorization: Bearer YOUR_GITHUB_TOKEN" \
+  -H "X-GitHub-Api-Version: 2022-11-28" \
+  https://api.github.com/repos/OWNER/REPO/actions/workflows/stock-monitor.yml/dispatches \
+  -d '{"ref":"main"}'
+
+# 指定股票代码
+curl -X POST \
+  -H "Accept: application/vnd.github+json" \
+  -H "Authorization: Bearer YOUR_GITHUB_TOKEN" \
+  -H "X-GitHub-Api-Version: 2022-11-28" \
+  https://api.github.com/repos/OWNER/REPO/actions/workflows/stock-monitor.yml/dispatches \
+  -d '{"ref":"main","inputs":{"stock_codes":"600036,000001,300001"}}'
+```
+
+**参数说明：**
+- `YOUR_GITHUB_TOKEN`: 您的 GitHub Personal Access Token（需要 `repo` 权限）
+- `OWNER`: GitHub 用户名或组织名
+- `REPO`: 仓库名称
+- `stock-monitor.yml`: workflow 文件名（如果文件名不同，请修改）
+- `main`: 分支名称（根据您的默认分支修改）
+- `stock_codes`: 股票代码，多个用逗号分隔（可选，不传则使用配置的默认值）
+
+**获取 GitHub Token：**
+1. 访问 https://github.com/settings/tokens
+2. 点击 "Generate new token" > "Generate new token (classic)"
+3. 设置名称和过期时间
+4. 勾选 `repo` 权限
+5. 生成并复制 token
+
+**示例（替换为实际值）：**
+```bash
+curl -X POST \
+  -H "Accept: application/vnd.github+json" \
+  -H "Authorization: Bearer ghp_xxxxxxxxxxxxxxxxxxxx" \
+  -H "X-GitHub-Api-Version: 2022-11-28" \
+  https://api.github.com/repos/your-username/trading-data/actions/workflows/stock-monitor.yml/dispatches \
+  -d '{"ref":"main","inputs":{"stock_codes":"600036,000001"}}'
+```
+
+#### 方式三：使用便捷脚本（推荐）
+
+项目提供了便捷脚本 `trigger_workflow.sh`，使用更简单：
+
+```bash
+# 1. 设置环境变量（只需设置一次）
+export GITHUB_TOKEN=your_github_token
+export GITHUB_OWNER=your-username
+export GITHUB_REPO=trading-data
+
+# 2. 运行脚本（使用默认股票代码 600036）
+./trigger_workflow.sh
+
+# 3. 或指定股票代码
+./trigger_workflow.sh 600036,000001,300001
+```
+
+**脚本说明：**
+- 脚本会自动检查配置并给出提示
+- 支持通过命令行参数指定股票代码
+- 显示执行状态和结果
 
 ### 5. 推送消息说明
 
