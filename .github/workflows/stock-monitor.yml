@@ -1,4 +1,4 @@
-name: 招商银行股票监控
+name: 股票实时监控
 
 on:
   schedule:
@@ -24,6 +24,9 @@ jobs:
           pip install -r requirements.txt
 
       - name: 运行股票监控
+        env:
+          # 股票代码配置，多个用逗号分隔，如: 600036,000001,300001
+          STOCK_CODES: ${{ secrets.STOCK_CODES || '600036' }}
         run: |
           python stock_monitor.py
 
